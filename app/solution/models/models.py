@@ -1,8 +1,5 @@
-# pydantic models para validacion de datos
 from pydantic import BaseModel
 from typing import List
-
-# models, bases, requests, creates y responses
 
 class StudentBase(BaseModel):
     student_names: str
@@ -12,6 +9,8 @@ class StudentCreate(StudentBase):
     pass
 
 class StudentResponse(StudentBase):
+    student_names: str
+    student_username: str
     student_id: int
 
     class Config:
@@ -144,10 +143,10 @@ class QualificationUpdate(QualificationBase):
 class QualificationResponse(QualificationBase):
     qualification_id: int
         
-class CalificarRequest(BaseModel):
+class QualificationRequest(BaseModel):
     student_id: int
     pw_id: str
-    guidelines: List[Guideline]  # lista de guidelines con sus achievements
+    guidelines: List[Guideline] 
 
     class Config:
         orm_mode = True

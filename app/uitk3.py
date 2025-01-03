@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, declarative_base
 from core.schemas import Student, PracticalWork, Qualification
-from solution.services.mssgs import send_email
+from app.solution.services.emails import send_email
 from decouple import config
 
 #USAREMOS LA CONEXION COMPLETA A LA DB

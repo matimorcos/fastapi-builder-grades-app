@@ -1,16 +1,11 @@
-# CRUD para qualificaitons
-# IMPORTACION DE ELEMENTOS PARA EL CRUD
-from fastapi import  APIRouter, Depends, HTTPException
+from fastapi import  APIRouter, Form, Depends, HTTPException
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
 from typing import List
-
-# IMPORTAMOS MODELOS PYDANTIC Y SQLALCHEMY
-from solution.models.models import StudentCreate, StudentResponse, SubjectCreate, SubjectResponse, PracticalWorkCreate, PracticalWorkResponse, CalificarRequest, QualificationBase, QualificationCreate, QualificationResponse  # Importa las clases del modelo
-from core.schemas import Student, Subject, PracticalWork, Qualification #importa las clases de la base de datos
+from solution.models.models import StudentCreate, StudentResponse, SubjectCreate, SubjectResponse, PracticalWorkCreate, PracticalWorkResponse, QualificationRequest, QualificationBase, QualificationCreate, QualificationResponse  # Importa las clases del modelo
+from core.schemas import Student, Subject, PracticalWork, Qualification
 from config.config import get_db, DATABASE_URL 
 from decouple import config
-#agrega el directorio SOLUTION a la ruta porque python no lo toma por si solo
 import sys 
 import os
 
@@ -22,7 +17,6 @@ sys.path.append(DIR_PATH)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# crear la aplicación fastapi
 router = APIRouter()
 
 def get_db():
@@ -33,7 +27,7 @@ def get_db():
         db.close()
         
 @router.post("/students/", response_model=StudentResponse)
-def create_student(student: StudentCreate, db: Session = Depends(get_db)):
+def create_student_endpoint(student: StudentCreate, db: Session = Depends(get_db)):
     try:
         db_student = Student(**student.dict())
         db.add(db_student)
@@ -43,8 +37,13 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
+@router.post("/student/", response_model=StudentResponse)
+async def create_student(student_names: str = Form(...), student_username: str = Form(...)):
+    student = StudentCreate(student_names=student_names, student_username=student_username)
+    return student
+
 @router.post("/students/batch/", response_model=List[StudentResponse])
-def create_students(students: List[StudentCreate], db: Session = Depends(get_db)):
+def create_students_endpoint(students: List[StudentCreate], db: Session = Depends(get_db)):
     try:
         db_students = []
         for student in students:
@@ -58,7 +57,7 @@ def create_students(students: List[StudentCreate], db: Session = Depends(get_db)
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")    
 
 @router.get("/students/{student_id}", response_model=StudentResponse)
-def get_student(student_id: int, db: Session = Depends(get_db)):
+def get_student_endpoint(student_id: int, db: Session = Depends(get_db)):
     try:
         student = db.query(Student).filter(Student.student_id == student_id).first()
         if student is None:
@@ -68,7 +67,7 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.post("/subjects/", response_model=SubjectResponse)
-def create_subject(subject: SubjectCreate, db: Session = Depends(get_db)):
+def create_subject_endpoint(subject: SubjectCreate, db: Session = Depends(get_db)):
     db_subject = Subject(**subject.dict())
     db.add(db_subject)
     db.commit()
@@ -76,11 +75,11 @@ def create_subject(subject: SubjectCreate, db: Session = Depends(get_db)):
     return db_subject
 
 @router.get("/subjects/", response_model=List[SubjectResponse])
-def get_subjects(db: Session = Depends(get_db)):
+def get_subjects_endpoint(db: Session = Depends(get_db)):
     return db.query(Subject).all()
 
 @router.post("/practicalworks/", response_model=PracticalWorkResponse)
-def create_practical_work(practical_work: PracticalWorkCreate, db: Session = Depends(get_db)):
+def create_practical_work_endpoint(practical_work: PracticalWorkCreate, db: Session = Depends(get_db)):
     try:
         db_practical_work = PracticalWork(**practical_work.dict())
         db.add(db_practical_work)
@@ -91,17 +90,15 @@ def create_practical_work(practical_work: PracticalWorkCreate, db: Session = Dep
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/practicalworks/", response_model=List[PracticalWorkResponse])
-def get_practical_works(db: Session = Depends(get_db)):
+def get_practical_works_endpoint(db: Session = Depends(get_db)):
     return db.query(PracticalWork).all()
 
 @router.get("/practicalwork/{pw_id}/guidelines/")
-def get_guidelines_and_achievements(pw_id: str, db: Session = Depends(get_db)):
-    # verificar que el trabajo práctico exista
+def get_guidelines_and_achievements_endpoint(pw_id: str, db: Session = Depends(get_db)):
     practical_work = db.query(PracticalWork).filter(PracticalWork.pw_id == pw_id).first()
     if not practical_work:
-        raise HTTPException(status_code=404, detail="Trabajo práctico no encontrado")
+        raise HTTPException(status_code=404, detail="Practical work not found")
 
-    # CARGAR los guidelines y achievements
     guidelines = {
         "guideline_1": {
             "guideline_id": practical_work.guideline_1_id,
@@ -167,25 +164,23 @@ def get_guidelines_and_achievements(pw_id: str, db: Session = Depends(get_db)):
 
     return {"pw_id": pw_id, "guidelines": guidelines}
 
-@router.post("/calificar/", response_model=QualificationResponse)
-def calificar_estudiante(
-    request: CalificarRequest,
+@router.post("/qualify/", response_model=QualificationResponse)
+def qualify_student_endpoint(
+    request: QualificationRequest,
     db: Session = Depends(get_db)
 ):
     student_id = request.student_id
     pw_id = request.pw_id
     guidelines = request.guidelines
-
-    # verificar que el estudiante y el trabajo práctico existan
+    
     student = db.query(Student).filter(Student.student_id == student_id).first()
     if not student:
-        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
+        raise HTTPException(status_code=404, detail="Student not found")
 
     practical_work = db.query(PracticalWork).filter(PracticalWork.pw_id == pw_id).first()
     if not practical_work:
-        raise HTTPException(status_code=404, detail="Trabajo práctico no encontrado")
-
-    # definir un diccionario para acceder a los puntajes de achievements
+        raise HTTPException(status_code=404, detail="Practical work not found")
+    
     scores = {
         practical_work.achievement_1_g1_id: practical_work.achievement_1_g1_score,
         practical_work.achievement_2_g1_id: practical_work.achievement_2_g1_score,
@@ -201,16 +196,14 @@ def calificar_estudiante(
     final_score = 0
     achievements_description = []
 
-    # procesar cada guideline y sus achievements
     for guideline in guidelines:
         for achievement in guideline.achievements:
             if achievement.achievement_id not in scores:
-                raise HTTPException(status_code=400, detail=f"Achievement ID {achievement.achievement_id} no válido")
+                raise HTTPException(status_code=400, detail=f"Achievement ID {achievement.achievement_id} not valid")
             
             final_score += scores[achievement.achievement_id]
             achievements_description.append(achievement.description)
 
-    # crear la entrada en la tabla qualifications
     new_qualification = Qualification(
         student_id=student_id,
         pw_id=pw_id,
@@ -222,7 +215,6 @@ def calificar_estudiante(
     db.commit()
     db.refresh(new_qualification)
 
-    # devolver el modelo de respuesta
     return QualificationResponse(
         student_id=new_qualification.student_id,
         pw_id=new_qualification.pw_id,

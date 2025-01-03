@@ -1,14 +1,11 @@
-#CREACION DE TABLAS EN LA BASE DE DATOS CON SQLALCHEMY PARA INTERACCION CON LA BASE DE DATOS
 from sqlalchemy import create_engine, Column, Integer, Table, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from decouple import config
 
-# conexion a la base de datos MariaDB usando decouple, pymysql y mypy que es para evitar errores comprueba estatica de tipos
-DATABASE_URL = config('DATABASE_URL') #conexion usando decouple
+DATABASE_URL = config('DATABASE_URL')
 engine = create_engine(DATABASE_URL)
-Base = declarative_base() #esencial para definir modelos orm
-
+Base = declarative_base()
 
 class Student(Base):
     __tablename__ = 'students'
@@ -17,9 +14,9 @@ class Student(Base):
     student_names = Column(String, nullable=False)
     student_username = Column(String, unique=True, nullable=False)
     
-    # RELACIONES
     qualifications = relationship("Qualification", back_populates="student")
     subjects = relationship("Subject", secondary='students_subjects', back_populates="students")
+
 class Subject(Base):
     __tablename__ = 'subjects'
 
@@ -31,11 +28,10 @@ class Subject(Base):
     teaching = Column(String(50), nullable=False)
     teachers_email = Column(String(50), nullable=False)
 
-    # RELACIONES
     practical_works = relationship("PracticalWork", back_populates="subject")
     students = relationship("Student", secondary='students_subjects', back_populates="subjects")
 
-    students_subjects = Table(     #TABLA INTERMEDIA RESUELVE ERROR 500 INTERNAL SERVER ERROR
+    students_subjects = Table(     
     'students_subjects',
     Base.metadata,
     Column('student_id', Integer, ForeignKey('students.student_id'), primary_key=True),
@@ -80,10 +76,8 @@ class PracticalWork(Base):
     achievement_3_g3_description = Column(String(255), nullable=False)
     achievement_3_g3_score = Column(Integer, nullable=False)
 
-    # FKS
     subject_id = Column(String(6), ForeignKey('subjects.subject_id'))
 
-    # RELACIONES
     subject = relationship("Subject", back_populates="practical_works")
     qualifications = relationship("Qualification", back_populates="practical_work")
 
@@ -99,5 +93,5 @@ class Qualification(Base):
     student = relationship("Student", back_populates="qualifications")
     practical_work = relationship("PracticalWork", back_populates="qualifications")
 
-Base.metadata.create_all(engine) #siempre al finalizar de definir los modelos, esenciales
+Base.metadata.create_all(engine)
 print ("base de datos creada")
