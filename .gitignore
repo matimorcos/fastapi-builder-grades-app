@@ -53,12 +53,12 @@ coverage.xml
 cover/
 json_responses
 
-
-#GUIs
+#Services
 app/uitk1.py
 app/uitk2.py
 app/uitk3.py
-app/uitk4.py
+app/gui.py
+app/solution/services
 
 # Translations
 *.mo
