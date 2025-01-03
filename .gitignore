@@ -55,10 +55,10 @@ json_responses
 
 
 #GUIs
-#uitk1.py
-#uitk2.py
-#uitk3.py
-#uitk4.py
+app/uitk1.py
+app/uitk2.py
+app/uitk3.py
+app/uitk4.py
 
 # Translations
 *.mo
